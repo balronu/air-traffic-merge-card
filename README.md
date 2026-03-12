@@ -1,31 +1,37 @@
 # Air Traffic Merge Card
 
-Lovelace / Dashboard Card für Home Assistant zur Darstellung der zusammengeführten
-ADS-B- und Flightradar24-Daten aus der **Air Traffic Merge Integration**.
+Dashboard card for the **Air Traffic Merge** Home Assistant integration.
 
-## Installation (HACS)
+## Installation via HACS
 
-1. HACS → Dashboard
-2. „Benutzerdefiniertes Repository“ hinzufügen
-3. Repository-URL:
-   https://github.com/balronu/air-traffic-merge-card
-4. Typ: **Dashboard**
-5. Card installieren
+1. Add this repository as a custom repository in HACS.
+2. Type: **Dashboard**
+3. Install **Air Traffic Merge Card**.
+4. Refresh the browser.
 
-## Resource (falls nicht automatisch hinzugefügt)
+## Manual installation
 
+Copy:
+
+- `dist/air-traffic-merge-card.js`
+
+To:
+
+- `/config/www/air-traffic-merge-card.js`
+
+Add this resource:
+
+```yaml
+url: /local/air-traffic-merge-card.js
+type: module
 ```
-/hacsfiles/air-traffic-merge-card/air-traffic-merge-card.js
-```
-Typ: **JavaScript-Modul**
 
-## Verwendung
+## Example
 
 ```yaml
 type: custom:air-traffic-merge-card
+entity: sensor.air_traffic_merge_flights
+title: Flugzeuge
+show_status: true
+show_debug: false
 ```
-
-## Abhängigkeit
-
-Diese Card benötigt die **Air Traffic Merge Integration**:
-https://github.com/balronu/air-traffic-merge
