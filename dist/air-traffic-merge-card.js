@@ -1,12 +1,13 @@
 class AirTrafficMergeCard extends HTMLElement {
   setConfig(config) {
     if (!config.entity) {
-      throw new Error('entity fehlt');
+      throw new Error("entity erforderlich");
     }
-    this.config = {
-      title: 'Flugzeuge',
+    this._config = {
+      title: "Flugzeuge",
       show_status: true,
       show_debug: false,
+      max_items: 25,
       ...config,
     };
   }
@@ -17,118 +18,122 @@ class AirTrafficMergeCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
-    this.render();
+    this._render();
   }
 
-  render() {
-    if (!this._hass || !this.config) return;
+  _render() {
+    if (!this._hass || !this._config) return;
 
-    const stateObj = this._hass.states[this.config.entity];
+    const stateObj = this._hass.states[this._config.entity];
     if (!stateObj) {
-      this.innerHTML = `<ha-card><div class="card-content">Entität ${this.config.entity} nicht gefunden.</div></ha-card>`;
+      this.innerHTML = `<ha-card header="${this._config.title}"><div class="card-content">Entity nicht gefunden: ${this._config.entity}</div></ha-card>`;
       return;
     }
 
     const attrs = stateObj.attributes || {};
-    const flights = Array.isArray(attrs.flights) ? attrs.flights : [];
+    const flights = (attrs.flights || []).slice(0, this._config.max_items);
     const counts = attrs.counts || {};
     const debug = attrs.debug || {};
 
-    const statusText = {
-      both: '✅ Beide Quellen liefern Daten',
-      fr24_only: '⚠️ Nur FR24 liefert Daten',
-      adsb_only: '⚠️ Nur ADS-B liefert Daten',
-      empty: '❌ Keine Flugdaten verfügbar',
-      ok: '✅ Daten verfügbar',
-    }[attrs.status] || attrs.status || '—';
+    const escapeHtml = (str) =>
+      String(str ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
 
-    const fmt = (v, suffix = '') => (v === null || v === undefined || v === '' ? '—' : `${v}${suffix}`);
-    const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const statusMap = {
+      both: "✅ Beide Quellen liefern Daten",
+      fr24_only: "⚠️ Nur FR24 verfügbar",
+      adsb_only: "⚠️ Nur ADS-B verfügbar",
+      empty: "❌ Keine Flugdaten verfügbar",
+    };
 
-    const chips = `
-      <div class="chips">
-        <span class="chip">FR24: ${fmt(attrs.fr24_count)}</span>
-        <span class="chip">ADS-B: ${fmt(attrs.adsb_count)}</span>
-        <span class="chip">Merge: ${fmt(attrs.merged_count)}</span>
-        <span class="chip">Medical: ${fmt(counts.medical)}</span>
-        <span class="chip">Militär: ${fmt(counts.military)}</span>
-        <span class="chip">Heli: ${fmt(counts.helicopter)}</span>
-      </div>`;
+    let html = `
+      <ha-card header="${escapeHtml(this._config.title)}">
+        <div class="atm-wrap">
+          <div class="atm-top">
+            <div><b>${stateObj.state}</b> Flugzeuge erkannt</div>
+            <div>Letztes Update: ${attrs.last_update ? new Date(attrs.last_update * 1000).toLocaleString() : "—"}</div>
+          </div>
+    `;
 
-    const rows = flights.map((f) => `
-      <div class="flight ${f.tracked ? 'tracked' : ''}">
-        <div class="head">
-          <div class="title">${esc(f.icon || '✈️')} ${esc(f.name || 'Unbekannt')}</div>
-          ${f.tracked ? '<span class="track-badge">TRACKED</span>' : ''}
+    if (this._config.show_status) {
+      html += `
+        <div class="atm-status">
+          <div>FR24: <b>${attrs.fr24_count ?? 0}</b></div>
+          <div>ADS-B: <b>${attrs.adsb_count ?? 0}</b></div>
+          <div>Zusammengeführt: <b>${attrs.merged_count ?? 0}</b></div>
+          <div>${statusMap[attrs.status] || attrs.status || "—"}</div>
         </div>
-        <div class="sub">${esc([f.airline, f.type_name].filter(Boolean).join(' ')) || '&nbsp;'}</div>
-        <div class="grid">
-          <div><b>Kennung:</b> ${esc(f.registration || 'unbekannt')}</div>
-          <div><b>Typcode:</b> ${esc(f.typecode || '—')}</div>
-          <div><b>Kategorie:</b> ${esc(f.category || '—')}</div>
-          <div><b>Quelle:</b> ${esc(f.source_text || f.source || '—')}</div>
-          <div><b>Entfernung:</b> ${fmt(f.distance_km, ' km')}</div>
-          <div><b>Richtung:</b> ${fmt(f.direction_deg, '°')}</div>
-          <div><b>Höhe:</b> ${fmt(f.alt_m, ' m')}</div>
-          <div><b>Speed:</b> ${fmt(f.speed_kmh, ' km/h')}</div>
-          <div><b>HEX:</b> ${esc(f.hex || '—')}</div>
-          <div><b>Grund:</b> ${esc(f.reason || '—')}</div>
+        <div class="atm-counts">
+          <span>🚑 ${counts.medical ?? 0}</span>
+          <span>🪖 ${counts.military ?? 0}</span>
+          <span>🚁 ${counts.helicopter ?? 0}</span>
+          <span>💼 ${counts.business ?? 0}</span>
+          <span>🛩️ ${counts.general_aviation ?? 0}</span>
+          <span>✈️ ${counts.civil ?? 0}</span>
         </div>
-      </div>
-    `).join('');
+      `;
+    }
 
-    const debugHtml = this.config.show_debug ? `
-      <details class="debug">
-        <summary>🛠️ Debug</summary>
-        <div class="debug-grid">
-          <div><b>Last update:</b> ${esc(attrs.last_update || '—')}</div>
-          <div><b>Status:</b> ${esc(statusText)}</div>
-          <div><b>FR24 entity:</b> ${esc(debug.fr24_entity || '—')}</div>
-          <div><b>ADS-B URL:</b> ${esc(debug.adsb_url || '—')}</div>
-          <div><b>ADS-B now:</b> ${esc(debug.adsb_now || '—')}</div>
-          <div><b>ADS-B error:</b> ${esc(debug.adsb_error || '—')}</div>
-          <div><b>Scan interval:</b> ${esc(debug.scan_interval || '—')}</div>
-          <div><b>Max items:</b> ${esc(debug.max_items || '—')}</div>
-        </div>
-      </details>` : '';
+    if (!flights.length) {
+      html += `<div class="atm-empty">Keine Flüge vorhanden.</div>`;
+    } else {
+      html += `<div class="atm-list">`;
+      for (const f of flights) {
+        html += `
+          <div class="atm-item ${f.tracked ? "tracked" : ""}">
+            <div class="atm-name">${escapeHtml(f.name || "Unbekannt")}</div>
+            <div class="atm-meta">${escapeHtml(f.airline || "")} ${escapeHtml(f.type_name || "")}</div>
+            <div class="atm-grid">
+              <div><b>Kennung:</b> ${escapeHtml(f.registration || "unbekannt")}</div>
+              <div><b>Typcode:</b> ${escapeHtml(f.typecode || "—")}</div>
+              <div><b>Kategorie:</b> ${escapeHtml(f.category || "—")}</div>
+              <div>${escapeHtml(f.source_text || "—")}</div>
+              <div><b>HEX:</b> ${escapeHtml(f.hex || "—")}</div>
+              <div><b>Grund:</b> ${escapeHtml(f.reason || "—")}</div>
+            </div>
+          </div>
+        `;
+      }
+      html += `</div>`;
+    }
 
-    this.innerHTML = `
-      <ha-card header="${esc(this.config.title)}">
-        <div class="card-content wrapper">
-          ${this.config.show_status ? `<div class="status">${esc(statusText)}</div>` : ''}
-          <div class="update">Letztes Update: ${esc(attrs.last_update || '—')}</div>
-          ${chips}
-          <div class="countline"><b>${esc(stateObj.state)}</b> Flugzeuge erkannt</div>
-          <div class="list">${rows || '<div>Keine Flüge vorhanden.</div>'}</div>
-          ${debugHtml}
+    if (this._config.show_debug) {
+      html += `
+        <details class="atm-debug">
+          <summary><b>Debug</b></summary>
+          <div>FR24 Entity: ${escapeHtml(debug.fr24_entity || "—")}</div>
+          <div>ADS-B URL: ${escapeHtml(debug.adsb_url || "—")}</div>
+          <div>ADS-B now: ${escapeHtml(debug.adsb_now || "—")}</div>
+          <div>ADS-B error: ${escapeHtml(debug.adsb_error || "—")}</div>
+          <div>Scan-Intervall: ${escapeHtml(debug.scan_interval || "—")}</div>
+          <div>Max Items: ${escapeHtml(debug.max_items || "—")}</div>
+        </details>
+      `;
+    }
+
+    html += `
         </div>
       </ha-card>
       <style>
-        .wrapper { display: flex; flex-direction: column; gap: 12px; }
-        .status { font-weight: 600; }
-        .update { opacity: 0.8; font-size: 0.95rem; }
-        .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-        .chip { padding: 4px 8px; border-radius: 999px; background: var(--secondary-background-color); font-size: 0.9rem; }
-        .countline { font-size: 1rem; }
-        .list { display: flex; flex-direction: column; gap: 12px; }
-        .flight { border: 1px solid var(--divider-color); border-radius: 12px; padding: 12px; }
-        .flight.tracked { border-color: var(--primary-color); }
-        .head { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
-        .title { font-weight: 700; }
-        .track-badge { font-size: 0.75rem; padding: 2px 6px; border-radius: 999px; background: var(--primary-color); color: var(--text-primary-color); }
-        .sub { opacity: 0.8; margin-top: 4px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 6px 12px; margin-top: 10px; }
-        .debug { margin-top: 8px; }
-        .debug-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 6px 12px; margin-top: 10px; }
+        .atm-wrap { padding: 16px; }
+        .atm-top { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+        .atm-status, .atm-counts { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+        .atm-list { display:flex; flex-direction:column; gap:12px; }
+        .atm-item { border:1px solid rgba(127,127,127,.25); border-radius:12px; padding:12px; }
+        .atm-item.tracked { border-width:2px; }
+        .atm-name { font-weight:700; font-size:1.05rem; margin-bottom:4px; }
+        .atm-meta { opacity:.8; margin-bottom:8px; }
+        .atm-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:6px 12px; }
+        .atm-empty { opacity:.8; }
+        .atm-debug { margin-top:12px; }
       </style>
     `;
+
+    this.innerHTML = html;
   }
 }
 
-customElements.define('air-traffic-merge-card', AirTrafficMergeCard);
-window.customCards = window.customCards || [];
-window.customCards.push({
-  type: 'air-traffic-merge-card',
-  name: 'Air Traffic Merge Card',
-  description: 'Shows merged FR24 and ADS-B aircraft data.'
-});
+customElements.define("air-traffic-merge-card", AirTrafficMergeCard);

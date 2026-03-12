@@ -1,37 +1,22 @@
 # Air Traffic Merge Card
 
-Dashboard card for the **Air Traffic Merge** Home Assistant integration.
+Lovelace Karte für die Integration **Air Traffic Merge**.
 
-## Installation via HACS
+## Installation
 
-1. Add this repository as a custom repository in HACS.
-2. Type: **Dashboard**
-3. Install **Air Traffic Merge Card**.
-4. Refresh the browser.
+### HACS
+1. Repository als **Custom Repository** hinzufügen
+2. Typ: **Dashboard**
+3. Karte installieren
+4. Dashboard-Ressourcen neu laden
 
-## Manual installation
-
-Copy:
-
-- `dist/air-traffic-merge-card.js`
-
-To:
-
-- `/config/www/air-traffic-merge-card.js`
-
-Add this resource:
-
-```yaml
-url: /local/air-traffic-merge-card.js
-type: module
-```
-
-## Example
+## Beispiel
 
 ```yaml
 type: custom:air-traffic-merge-card
-entity: sensor.air_traffic_merge_flights
+entity: sensor.air_traffic_merge
 title: Flugzeuge
 show_status: true
 show_debug: false
+max_items: 25
 ```
