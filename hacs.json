@@ -1,6 +1,7 @@
 {
-  "name": "Air Traffic Merge Card",
-  "content_in_root": false,
+  "name": "Air Traffic Merge Card Local",
+  "filename": "air-traffic-merge-card.js",
   "render_readme": true,
-  "filename": "dist/air-traffic-merge-card.js"
+  "content_in_root": false,
+  "homeassistant": "2024.1.0"
 }
