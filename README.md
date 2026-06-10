@@ -1,38 +1,35 @@
-# Air Traffic Merge Card Local
+# Air Traffic Merge Card
 
-Lovelace card for the Air Traffic Merge integration, optimized for **local ADS-B** / `adsb.im` setups.
+Lovelace card for the Air Traffic Merge Home Assistant integration.
 
-This repo is structured so you can upload it to GitHub as-is and add it to HACS as a custom dashboard repository.
+The card displays aircraft from `sensor.air_traffic_merged` and supports both the current local ADS-B attribute format and the newer categorized merge format.
 
-## Highlights
+## Features
 
-- Clean Home Assistant card layout
-- Works with ADS-B-only and FR24 + ADS-B setups
-- Count chips for Medical, Military, Helicopter, Business, GA and Civil
-- Flight rows with source, distance, altitude, speed, heading and detection reason
-- Optional status and debug sections
-
-## Repository structure
-
-```text
-dist/air-traffic-merge-card.js
-hacs.json
-README.md
-LICENSE
-.gitignore
-```
+- Flight rows with callsign, registration, source, distance, altitude, speed, and heading
+- Optional status block
+- Optional category chips when the integration provides category counts
+- Tracked-aircraft badge support
+- Works with ADS-B-only, FR24-only, and FR24 + ADS-B setups
 
 ## Install with HACS
 
-1. Create a new GitHub repository, for example `air-traffic-merge-card-local`
-2. Upload the contents of this repo
-3. In HACS, open **Custom repositories**
-4. Add your GitHub repo URL
-5. Choose **Dashboard**
-6. Install **Air Traffic Merge Card Local**
-7. Add the card resource if HACS does not do it automatically
+1. Open HACS.
+2. Add this repository as a custom dashboard repository:
 
-## Manual install
+   ```text
+   https://github.com/balronu/air-traffic-merge-card
+   ```
+
+3. Install `Air Traffic Merge Card`.
+4. Add the dashboard resource if HACS does not add it automatically:
+
+   ```yaml
+   url: /hacsfiles/air-traffic-merge-card/dist/air-traffic-merge-card.js
+   type: module
+   ```
+
+## Manual Install
 
 Copy this file:
 
@@ -40,7 +37,7 @@ Copy this file:
 dist/air-traffic-merge-card.js
 ```
 
-into:
+to:
 
 ```text
 /config/www/air-traffic-merge-card.js
@@ -53,11 +50,11 @@ url: /local/air-traffic-merge-card.js
 type: module
 ```
 
-## Example card
+## Example Card
 
 ```yaml
 type: custom:air-traffic-merge-card
-entity: sensor.air_traffic_merge
+entity: sensor.air_traffic_merged
 title: Flugzeuge
 show_status: true
 show_counts: true
@@ -65,13 +62,10 @@ show_debug: false
 max_items: 25
 ```
 
-## Recommended pairing
+## Pairing
 
-Use this together with the integration repo:
+Use this together with:
 
-- `air-traffic-merge-local`
-
-## Notes
-
-- The original idea and base structure come from `balronu/air-traffic-merge-card`
-- This repo is cleaned up so you can publish it directly as your own card repo
+```text
+https://github.com/balronu/air-traffic-merge
+```

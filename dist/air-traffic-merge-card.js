@@ -48,8 +48,9 @@ class AirTrafficMergeCard extends HTMLElement {
   }
 
   _statusText(attrs) {
-    const hasFr24 = Number(attrs.fr24_count ?? 0) > 0;
-    const hasAdsb = Number(attrs.adsb_count ?? 0) > 0;
+    const flights = Array.isArray(attrs.flights) ? attrs.flights : [];
+    const hasFr24 = Number(attrs.fr24_count ?? 0) > 0 || flights.some((f) => ['FR24', 'BOTH'].includes(f.source));
+    const hasAdsb = Number(attrs.adsb_count ?? 0) > 0 || flights.some((f) => ['ADSB', 'BOTH'].includes(f.source));
 
     if (hasFr24 && hasAdsb) return '✅ FR24 + ADS-B verfügbar';
     if (hasAdsb) return '📡 Nur lokales ADS-B aktiv';
@@ -69,14 +70,14 @@ class AirTrafficMergeCard extends HTMLElement {
 
   _flightRow(f) {
     const tracked = f.tracked ? '<span class="atm-badge atm-badge-tracked">TRACKED</span>' : '';
-    const source = this._escape(f.source_text || '—');
-    const category = this._escape(f.category || '—');
+    const source = this._escape(f.source_text || f.source || '—');
+    const category = this._escape(f.category || (f.tracked ? 'tracked' : f.source) || '—');
     const reason = this._escape(f.reason || '—');
     const callsign = this._escape(f.name || f.callsign || 'Unbekannt');
     const operator = this._escape(f.airline || 'Operator unbekannt');
-    const typeName = this._escape(f.type_name || 'Typ unbekannt');
+    const typeName = this._escape(f.type_name || f.aircraft_model || 'Typ unbekannt');
     const reg = this._escape(f.registration || 'unbekannt');
-    const typecode = this._escape(f.typecode || '—');
+    const typecode = this._escape(f.typecode || f.aircraft_model || '—');
     const hex = this._escape(f.hex || '—');
     const dist = this._fmtDistance(f.dist_km);
     const alt = f.alt_m == null ? '—' : `${this._fmtNumber(f.alt_m)} m`;
@@ -120,6 +121,7 @@ class AirTrafficMergeCard extends HTMLElement {
     const attrs = stateObj.attributes || {};
     const flights = Array.isArray(attrs.flights) ? attrs.flights.slice(0, this._config.max_items) : [];
     const counts = attrs.counts || {};
+    const hasCounts = Object.keys(counts).length > 0;
     const debug = attrs.debug || {};
     const total = Number(stateObj.state || 0);
     const lastUpdate = attrs.last_update
@@ -175,10 +177,10 @@ class AirTrafficMergeCard extends HTMLElement {
           ${this._config.show_status ? `
             <div class="atm-status">
               <div>${this._statusText(attrs)}</div>
-              <div class="atm-status-small">FR24: ${this._fmtNumber(attrs.fr24_count ?? 0)} • ADS-B: ${this._fmtNumber(attrs.adsb_count ?? 0)} • Zusammengeführt: ${this._fmtNumber(attrs.merged_count ?? 0)}</div>
+              <div class="atm-status-small">FR24: ${this._fmtNumber(attrs.fr24_count ?? flights.filter((f) => ['FR24', 'BOTH'].includes(f.source)).length)} • ADS-B: ${this._fmtNumber(attrs.adsb_count ?? flights.filter((f) => ['ADSB', 'BOTH'].includes(f.source)).length)} • Zusammengeführt: ${this._fmtNumber(attrs.merged_count ?? flights.filter((f) => f.source === 'BOTH').length)}</div>
             </div>
           ` : ''}
-          ${this._config.show_counts ? `
+          ${this._config.show_counts && hasCounts ? `
             <div class="atm-chips">
               ${this._categoryChip('Medical', counts.medical ?? 0, '🚁')}
               ${this._categoryChip('Military', counts.military ?? 0, '🛡️')}

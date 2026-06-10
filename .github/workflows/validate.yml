@@ -1,0 +1,38 @@
+name: Validate
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Check JavaScript syntax
+        run: node --check dist/air-traffic-merge-card.js
+
+      - name: Validate JSON files
+        run: |
+          node - <<'JS'
+          const fs = require('fs');
+          const path = require('path');
+
+          function walk(dir) {
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory() && entry.name !== '.git') walk(full);
+              if (entry.isFile() && entry.name.endsWith('.json')) {
+                JSON.parse(fs.readFileSync(full, 'utf8'));
+                console.log(full);
+              }
+            }
+          }
+
+          walk('.');
+          JS
